@@ -63,7 +63,7 @@ def run_pipeline(seed_domain: str):
         persons = find_decision_makers(company["domain"])
         # Filter to true decision-makers only, cap per company
         decision_makers = [p for p in persons if is_decision_maker(p)]
-        all_persons.extend(decision_makers[:MAX_CONTACTS])
+        all_persons.extend(persons[:MAX_CONTACTS])
 
     if not all_persons:
         print("❌  No decision-makers found. Exiting.")

@@ -8,11 +8,6 @@ API_KEY = os.getenv("PROSPEO_API_KEY")
 
 
 def resolve_email(person: dict) -> dict | None:
-    """
-    Stage 3: Resolves a verified work email for a decision-maker.
-    Uses Prospeo /enrich-person with person_id or linkedin_url.
-    Returns enriched dict with "email" key, or None if not found.
-    """
     if not API_KEY:
         raise ValueError("PROSPEO_API_KEY not set in .env")
 
@@ -33,10 +28,7 @@ def resolve_email(person: dict) -> dict | None:
     try:
         response = requests.post(
             "https://api.prospeo.io/enrich-person",
-            headers={
-                "X-KEY": API_KEY,
-                "Content-Type": "application/json"
-            },
+            headers={"X-KEY": API_KEY, "Content-Type": "application/json"},
             json=payload,
             timeout=20
         )
@@ -78,9 +70,30 @@ def resolve_email(person: dict) -> dict | None:
 
 def resolve_emails_bulk(persons: list[dict]) -> list[dict]:
     enriched = []
+    seen_emails = set()      # duplicate email check
+    seen_linkedin = set()    # duplicate person check (same person, diff company)
+
     for person in persons:
+        # Skip same person appearing twice (by linkedin_url)
+        linkedin = person.get("linkedin_url", "")
+        if linkedin and linkedin in seen_linkedin:
+            print(f"[Eazyreach] Duplicate person skipped: {person.get('full_name')}")
+            continue
+        if linkedin:
+            seen_linkedin.add(linkedin)
+
         result = resolve_email(person)
-        if result:
-            enriched.append(result)
-    print(f"[Eazyreach] Resolved {len(enriched)}/{len(persons)} emails")
+        if not result:
+            continue
+
+        # Skip if same email already resolved
+        email = result["email"]
+        if email in seen_emails:
+            print(f"[Eazyreach] Duplicate email skipped: {email}")
+            continue
+
+        seen_emails.add(email)
+        enriched.append(result)
+
+    print(f"[Eazyreach] Resolved {len(enriched)}/{len(persons)} emails (duplicates removed)")
     return enriched
