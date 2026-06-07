@@ -1,4 +1,5 @@
 import os
+import time
 import requests
 from dotenv import load_dotenv
 
@@ -70,11 +71,10 @@ def resolve_email(person: dict) -> dict | None:
 
 def resolve_emails_bulk(persons: list[dict]) -> list[dict]:
     enriched = []
-    seen_emails = set()      # duplicate email check
-    seen_linkedin = set()    # duplicate person check (same person, diff company)
+    seen_emails = set()
+    seen_linkedin = set()
 
     for person in persons:
-        # Skip same person appearing twice (by linkedin_url)
         linkedin = person.get("linkedin_url", "")
         if linkedin and linkedin in seen_linkedin:
             print(f"[Eazyreach] Duplicate person skipped: {person.get('full_name')}")
@@ -83,10 +83,11 @@ def resolve_emails_bulk(persons: list[dict]) -> list[dict]:
             seen_linkedin.add(linkedin)
 
         result = resolve_email(person)
+        time.sleep(1)  # avoid rate limiting
+
         if not result:
             continue
 
-        # Skip if same email already resolved
         email = result["email"]
         if email in seen_emails:
             print(f"[Eazyreach] Duplicate email skipped: {email}")
